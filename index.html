@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Controle Arduino</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app-container">
+
+        <div id="sidebar-wrapper">
+            <button id="scroll-up-btn" class="scroll-btn">↑</button>
+
+            <div id="sidebar">
+                </div>
+
+            <button id="scroll-down-btn" class="scroll-btn">↓</button>
+        </div>
+
+<div id="main-content">
+
+    <div class="content-section">
+    <div id="info-section">
+    
+        <div class="info-item">
+            <span>Modelo:</span>
+            <span id="modelo-display">N/D</span>
+        </div>
+    
+        <div id="bottom-info-wrapper">
+            <div class="info-item">
+                <label for="codigo-sectra-input">Codigo Sectra:</label>
+                <input type="number" id="codigo-sectra-input" class="info-input">
+            </div>
+            <div class="info-item">
+                <label for="lote-input">Lote:</label>
+                <input type="number" id="lote-input" class="info-input">
+            </div>
+        </div>
+    
+    </div>
+
+        <div id="logo-section">
+            <img src="./logo/logo.png" alt="Logo da Empresa">
+        </div>
+    </div>
+
+    <div class="content-section"></div>
+    <div class="content-section"></div>
+    <div class="content-section"></div>
+    <div class="content-section">
+        <button id="closeButton">Fechar Programa</button>
+    </div>
+
+</div>
+
+    </div>
+
+    <script src="./renderer.js"></script>
+</body>
+
+</html>
