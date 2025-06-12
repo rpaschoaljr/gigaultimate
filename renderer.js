@@ -1,76 +1,88 @@
-// renderer.js - VERSÃO ATUALIZADA COM LÓGICA DE SCROLL
+// renderer.js - VERSÃO ATUALIZADA COM LÓGICA DE MODAL
+
+// --- Variáveis de Estado ---
+let currentModel = null; // Armazena o nome do modelo atualmente selecionado
+let pendingModel = null; // Armazena o nome do modelo que aguarda confirmação
+
+// --- Funções Auxiliares ---
 
 /**
- * Controla a visibilidade dos botões de scroll com base
- * na posição da rolagem do elemento.
- * @param {HTMLElement} scrollElement - O elemento que rola (nossa #sidebar).
- * @param {HTMLElement} upButton - O botão de rolar para cima.
- * @param {HTMLElement} downButton - O botão de rolar para baixo.
+ * Define um modelo como ativo, atualizando a UI e enviando para o Arduino.
+ * @param {string} modelName - O nome do modelo a ser selecionado.
+ */
+function selectModel(modelName) {
+    if (!modelName) return;
+
+    currentModel = modelName;
+    document.getElementById('modelo-display').textContent = modelName;
+    console.log(`Modelo selecionado: ${modelName}`);
+    window.api.sendToArduino(modelName);
+}
+
+/**
+ * Mostra o modal de confirmação.
+ * @param {string} modelToConfirm - O nome do modelo que o usuário tentou selecionar.
+ */
+function showModal(modelToConfirm) {
+    pendingModel = modelToConfirm; // Guarda o modelo pendente
+    document.getElementById('confirmation-modal').classList.remove('hidden');
+}
+
+/**
+ * Esconde o modal de confirmação.
+ */
+function hideModal() {
+    pendingModel = null; // Limpa o modelo pendente
+    document.getElementById('confirmation-modal').classList.add('hidden');
+}
+
+
+/**
+ * Controla a visibilidade dos botões de scroll.
+ * (Esta função continua a mesma de antes)
  */
 function updateScrollButtonsVisibility(scrollElement, upButton, downButton) {
     if (!scrollElement || !upButton || !downButton) return;
-
     const tolerance = 1;
-
-    // Esconde/mostra o botão de CIMA se não estiver no topo
     const showUp = scrollElement.scrollTop > tolerance;
     upButton.classList.toggle('hidden', !showUp);
-
-    // Esconde/mostra o botão de BAIXO se não estiver no final
     const showDown = scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight > tolerance;
     downButton.classList.toggle('hidden', !showDown);
 }
 
 
+// --- LÓGICA PRINCIPAL DA PÁGINA ---
+
 window.addEventListener('DOMContentLoaded', async () => {
 
     // Elementos da página
     const sidebar = document.getElementById('sidebar');
-    const statusSpan = document.getElementById('status');
     const closeButton = document.getElementById('closeButton');
     const scrollUpBtn = document.getElementById('scroll-up-btn');
     const scrollDownBtn = document.getElementById('scroll-down-btn');
+    const confirmationModal = document.getElementById('confirmation-modal');
+    const confirmChangeBtn = document.getElementById('confirm-change-btn');
+    const cancelChangeBtn = document.getElementById('cancel-change-btn');
 
-    // Constantes para o scroll
-    const buttonHeight = 120; // Altura de um botão
-    const buttonMargin = 10;  // Margem inferior
-    const scrollAmount = buttonHeight + buttonMargin; // Total a rolar
+    // --- Configuração dos Eventos ---
 
-    // --- LÓGICA DOS BOTÕES DE SCROLL ---
+    // Botões de Scroll
+    sidebar.addEventListener('scroll', () => updateScrollButtonsVisibility(sidebar, scrollUpBtn, scrollDownBtn));
+    const scrollAmount = 120 + 10;
+    scrollUpBtn.addEventListener('click', () => sidebar.scrollBy({ top: -scrollAmount, behavior: 'smooth' }));
+    scrollDownBtn.addEventListener('click', () => sidebar.scrollBy({ top: scrollAmount, behavior: 'smooth' }));
 
-    // Clique no botão de rolar para CIMA
-    scrollUpBtn.addEventListener('click', () => {
-        sidebar.scrollBy({
-            top: -scrollAmount, // Rola para cima
-            behavior: 'smooth'  // Efeito de rolagem suave
-        });
+    // Botão de Fechar App
+    closeButton.addEventListener('click', () => window.api.closeApp());
+
+    // Botões do Modal
+    cancelChangeBtn.addEventListener('click', hideModal);
+    confirmChangeBtn.addEventListener('click', () => {
+        selectModel(pendingModel); // Seleciona o modelo que estava pendente
+        hideModal(); // Esconde o modal
     });
 
-    // Clique no botão de rolar para BAIXO
-    scrollDownBtn.addEventListener('click', () => {
-        sidebar.scrollBy({
-            top: scrollAmount,  // Rola para baixo
-            behavior: 'smooth'
-        });
-    });
-
-    // Toda vez que a sidebar rolar (pelo mouse ou botão), atualiza a visibilidade
-    sidebar.addEventListener('scroll', () => {
-        updateScrollButtonsVisibility(sidebar, scrollUpBtn, scrollDownBtn);
-    });
-
-
-    // --- LÓGICA ANTIGA QUE CONTINUA FUNCIONANDO ---
-
-    closeButton.addEventListener('click', () => {
-        window.api.closeApp();
-    });
-
-    window.api.onArduinoStatus((connected) => {
-        if (connected) { statusSpan.textContent = 'Conectado'; statusSpan.className = 'conectado'; }
-        else { statusSpan.textContent = 'Desconectado'; statusSpan.className = 'desconectado'; }
-    });
-
+    // Carregamento dos Botões Dinâmicos da Sidebar
     try {
         const buttonNames = await window.api.getButtonNames();
         if (buttonNames && buttonNames.length > 0) {
@@ -78,11 +90,17 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const button = document.createElement('button');
                 button.textContent = name;
                 button.className = 'sidebar-btn';
+
+                // LÓGICA DE CLIQUE ATUALIZADA
                 button.addEventListener('click', () => {
-                    console.log(`Botão '${name}' clicado!`);
-                    window.api.sendToArduino(name);
-                    document.getElementById('modelo-display').textContent = name;
+                    // Se um modelo já foi escolhido E o novo é diferente
+                    if (currentModel && currentModel !== name) {
+                        showModal(name); // Mostra o modal para confirmar
+                    } else {
+                        selectModel(name); // Senão, apenas seleciona o modelo
+                    }
                 });
+
                 sidebar.appendChild(button);
             });
         }
@@ -90,8 +108,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.error('Erro ao buscar nomes dos botões:', error);
     }
 
-    // Chama a função uma vez no início para definir o estado inicial dos botões de scroll
-    setTimeout(() => {
-        updateScrollButtonsVisibility(sidebar, scrollUpBtn, scrollDownBtn);
-    }, 100);
+    // Estado inicial dos botões de scroll
+    setTimeout(() => updateScrollButtonsVisibility(sidebar, scrollUpBtn, scrollDownBtn), 100);
 });
