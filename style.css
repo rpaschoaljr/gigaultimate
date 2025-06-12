@@ -1,13 +1,9 @@
-/* style.css */
-
 :root {
     --cor-primaria: #f0f0f0;
     --cor-secundaria: #007bff;
     --cor-teste-ok: #28a745;
     --cor-teste-fail: #dc3545;
     --cor-testando: #17a2b8;
-
-    /* Variável global para o tamanho da fonte */
     --font-size-padrao: 14px;
 }
 
@@ -49,14 +45,12 @@ html {
     border: none;
     background-color: #e0e0e0;
     font-size: var(--font-size-padrao);
-    /* Aplicado */
     cursor: pointer;
-    transition: opacity 0.3s, visibility 0.3s;
 }
 
-.scroll-btn.hidden {
-    opacity: 0;
-    visibility: hidden;
+.scroll-btn.hidden,
+.test-item.hidden {
+    display: none;
 }
 
 #scroll-up-btn {
@@ -72,7 +66,6 @@ html {
     height: 120px;
     margin-bottom: 10px;
     font-size: var(--font-size-padrao);
-    /* Aplicado */
     cursor: pointer;
 }
 
@@ -91,23 +84,15 @@ html {
     padding: 10px;
 }
 
-.content-section:last-child {
-    border-bottom: none;
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-end;
-}
-
-#closeButton {
-    height: 80px;
-    width: 150px;
-    /* Adicionando a variável aqui também */
-    font-size: var(--font-size-padrao);
-}
-
 .content-section:first-child {
     display: flex;
     padding: 0;
+}
+
+.content-section:nth-child(3) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #info-section {
@@ -115,12 +100,11 @@ html {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    justify-content: space-evenly;
+    justify-content: center;
 }
 
 .info-item {
     font-size: var(--font-size-padrao);
-    /* Aplicado */
     font-weight: bold;
 }
 
@@ -131,31 +115,19 @@ html {
 #modelo-display {
     color: var(--cor-secundaria);
     margin-left: 10px;
+    font-size: 1.5em;
 }
 
 .info-input {
     margin-left: 10px;
     padding: 5px;
-    font-size: var(--font-size-padrao);
-    /* Aplicado */
-    width: 150px;
+    font-size: 1.8em;
+    width: 200px;
     height: 80px;
     box-sizing: border-box;
     text-align: center;
-}
-
-#bottom-info-wrapper {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-#bottom-info-wrapper .info-item {
-    /* Nenhuma regra de fonte aqui, herda de .info-item */
-}
-
-#bottom-info-wrapper .info-input {
-    width: 120px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 #logo-section {
@@ -172,46 +144,208 @@ html {
     object-fit: contain;
 }
 
-#status {
+.test-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 10px;
+}
+
+.test-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.test-label {
+    background-color: #e9ecef;
+    padding: 10px;
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 2px solid #ddd;
+}
+
+.test-status {
+    flex-grow: 1;
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+.status-indicator {
+    width: 120px;
+    height: 60px;
+    background-color: #ccc;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 48px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.status-indicator.ok {
+    background-color: var(--cor-teste-ok);
+}
+
+.status-indicator.ok::before {
+    content: '✓';
+}
+
+.status-indicator.fail {
+    background-color: var(--cor-teste-fail);
+}
+
+.status-indicator.fail::before {
+    content: '✗';
+}
+
+.status-indicator.testing {
+    background-color: var(--cor-testando);
+    font-size: 32px;
+    line-height: 60px;
+    letter-spacing: 2px;
+}
+
+.status-indicator.testing::before {
+    content: '>';
+    animation: loading-arrow 1.5s infinite;
+}
+
+@keyframes loading-arrow {
+    0% {
+        content: '>';
+    }
+
+    33% {
+        content: '>>';
+    }
+
+    66% {
+        content: '>>>';
+    }
+
+    100% {
+        content: '>';
+    }
+}
+
+#notice-board {
+    width: 100%;
+    height: 30px;
+    font-size: 20px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1px solid #ccc;
+    background-color: #f8f9fa;
+    text-align: center;
+}
+
+.measurement-value {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+}
+
+#contagem-section .test-status {
+    flex-direction: column;
+    justify-content: space-evenly;
+    font-size: 1.2em;
+}
+
+.count-item {
     font-weight: bold;
 }
 
-.conectado {
+.count-item.aprovados {
     color: var(--cor-teste-ok);
 }
 
-.desconectado {
+.count-item.reprovados {
     color: var(--cor-teste-fail);
 }
+
+/* Seção de Validação (última seção) */
+#validation-section {
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.validation-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.validation-group label {
+    font-weight: bold;
+    font-size: var(--font-size-padrao);
+}
+
+.received-value {
+    height: 30px;
+    width: 200px;
+    background-color: #e9ecef;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: #555;
+}
+
+/* Classes de validação para os inputs */
+.info-input.match {
+    background-color: #d4edda;
+    border: 2px solid var(--cor-teste-ok);
+}
+
+.info-input.mismatch {
+    background-color: #f8d7da;
+    border: 2px solid var(--cor-teste-fail);
+}
+
+#closeButton {
+    height: 80px;
+    width: 150px;
+    font-size: var(--font-size-padrao);
+    /* Adicionado para alinhar com os grupos de validação */
+    align-self: flex-end;
+    margin-bottom: 10px;
+}
+
+/* Modal */
 .modal-overlay {
     position: fixed;
-    /* Fica fixo na tela, mesmo com scroll */
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
-    /* Fundo preto semi-transparente */
-
-    /* Centraliza a caixa de diálogo no meio da tela */
     display: flex;
     justify-content: center;
     align-items: center;
-
     z-index: 1000;
-    /* Garante que o modal fique na frente de tudo */
     opacity: 1;
     transition: opacity 0.3s ease;
 }
 
-/* Classe para esconder o modal */
 .modal-overlay.hidden {
     opacity: 0;
     pointer-events: none;
-    /* Impede cliques quando estiver escondido */
 }
 
-/* A caixa de diálogo branca */
 .modal-content {
     background: white;
     padding: 30px;
@@ -226,18 +360,14 @@ html {
     margin-bottom: 20px;
 }
 
-/* O container para os botões do modal */
 .modal-buttons {
     display: flex;
     justify-content: space-around;
-    /* Espaça os botões */
 }
 
-/* Estilo para os botões de Confirmar e Cancelar */
 .modal-buttons button {
     width: 150px;
     height: 80px;
-    /* Altura solicitada */
     border: none;
     border-radius: 5px;
     font-size: 1.2em;
@@ -247,12 +377,10 @@ html {
 
 #confirm-change-btn {
     background-color: var(--cor-teste-ok);
-    /* Verde */
     color: white;
 }
 
 #cancel-change-btn {
     background-color: var(--cor-teste-fail);
-    /* Vermelho */
     color: white;
 }

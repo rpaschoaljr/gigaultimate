@@ -12,62 +12,117 @@
 
         <div id="sidebar-wrapper">
             <button id="scroll-up-btn" class="scroll-btn">↑</button>
-
             <div id="sidebar">
-                </div>
-
+            </div>
             <button id="scroll-down-btn" class="scroll-btn">↓</button>
         </div>
 
-<div id="main-content">
+        <div id="main-content">
 
-    <div class="content-section">
-    <div id="info-section">
-    
-        <div class="info-item">
-            <span>Modelo:</span>
-            <span id="modelo-display">N/D</span>
-        </div>
-    
-        <div id="bottom-info-wrapper">
-            <div class="info-item">
-                <label for="codigo-sectra-input">Codigo Sectra:</label>
-                <input type="number" id="codigo-sectra-input" class="info-input">
-            </div>
-            <div class="info-item">
-                <label for="lote-input">Lote:</label>
-                <input type="number" id="lote-input" class="info-input">
-            </div>
-        </div>
-    
-    </div>
-
-        <div id="logo-section">
-            <img src="./logo/logo.png" alt="Logo da Empresa">
-        </div>
-    </div>
-
-    <div class="content-section"></div>
-    <div class="content-section"></div>
-    <div class="content-section"></div>
-    <div class="content-section">
-        <button id="closeButton">Fechar Programa</button>
-    </div>
-
-</div>
-
-    </div>
-        <div id="confirmation-modal" class="modal-overlay hidden">
-            <div class="modal-content">
-                <p>Você tem certeza que deseja trocar de modelo? O teste atual será interrompido.</p>
-                <div class="modal-buttons">
-                    <button id="cancel-change-btn">Cancelar</button>
-                    <button id="confirm-change-btn">Confirmar</button>
+            <div class="content-section">
+                <div id="info-section">
+                    <div class="info-item">
+                        <span>Modelo:</span>
+                        <span id="modelo-display">N/D</span>
+                    </div>
+                </div>
+                <div id="logo-section">
+                    <img src="./logo/logo.png" alt="Logo da Empresa">
                 </div>
             </div>
+
+            <div class="content-section">
+                <div class="test-container">
+                    <div id="pressurizacao-section" class="test-item">
+                        <div class="test-label">Pressurização</div>
+                        <div class="test-status"><span class="status-indicator"></span></div>
+                    </div>
+                    <div id="conformidade-section" class="test-item">
+                        <div class="test-label">Conformidade</div>
+                        <div class="test-status"><span class="status-indicator"></span></div>
+                    </div>
+                    <div id="estanqueidade-section" class="test-item">
+                        <div class="test-label">Estanqueidade</div>
+                        <div class="test-status"><span class="status-indicator"></span></div>
+                    </div>
+                    <div id="tag-section" class="test-item hidden">
+                        <div class="test-label">TAG</div>
+                        <div class="test-status"><span class="status-indicator"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <input type="text" id="notice-board" placeholder="Aguardando avisos..." readonly>
+            </div>
+
+            <div class="content-section">
+                <div class="test-container">
+                    <div id="tempo-section" class="test-item">
+                        <div class="test-label">Tempo</div>
+                        <div class="test-status">
+                            <span id="tempo-value" class="measurement-value">0s</span>
+                        </div>
+                    </div>
+                    <div id="equipo-section" class="test-item">
+                        <div class="test-label">Pressão Equipo</div>
+                        <div class="test-status">
+                            <span id="equipo-value" class="measurement-value">0 mmHg</span>
+                        </div>
+                    </div>
+                    <div id="membrana-section" class="test-item hidden">
+                        <div class="test-label">Pressão Membrana</div>
+                        <div class="test-status">
+                            <span id="membrana-value" class="measurement-value">0 mmHg</span>
+                        </div>
+                    </div>
+                    <div id="contagem-section" class="test-item">
+                        <div class="test-label">Contagem</div>
+                        <div class="test-status">
+                            <div class="count-item aprovados">
+                                <span>Aprovados: </span>
+                                <span id="aprovados-count">0</span>
+                            </div>
+                            <div class="count-item reprovados">
+                                <span>Reprovados: </span>
+                                <span id="reprovados-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section" id="validation-section">
+            
+                <div class="validation-group">
+                    <label>Codigo Sectra</label>
+                    <span id="sectra-received-value" class="received-value">---</span>
+                    <input type="number" id="codigo-sectra-input" class="info-input">
+                </div>
+            
+                <div class="validation-group">
+                    <label>Lote</label>
+                    <span id="lote-received-value" class="received-value">---</span>
+                    <input type="number" id="lote-input" class="info-input">
+                </div>
+            
+                <button id="closeButton">Fechar Programa</button>
+            </div>
+
         </div>
+    </div>
 
     <script src="./renderer.js"></script>
+
+    <div id="confirmation-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <p>Você tem certeza que deseja trocar de modelo? O teste atual será interrompido.</p>
+            <div class="modal-buttons">
+                <button id="cancel-change-btn">Cancelar</button>
+                <button id="confirm-change-btn">Confirmar</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
