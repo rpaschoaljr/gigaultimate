@@ -14,6 +14,8 @@ html {
     height: 100%;
     font-family: sans-serif;
     overflow: hidden;
+    /* NOVO: Cor de fundo geral um pouco mais escura para dar contraste */
+    background-color: #dcdcdc;
 }
 
 #app-container {
@@ -75,6 +77,8 @@ html {
     flex-direction: column;
     align-items: stretch;
     padding: 0;
+    /* NOVO: Cor de fundo principal agora é a primária */
+    background-color: var(--cor-primaria);
 }
 
 .content-section {
@@ -119,7 +123,6 @@ html {
 }
 
 .info-input {
-    margin-left: 10px;
     padding: 5px;
     font-size: 1.8em;
     width: 200px;
@@ -139,8 +142,9 @@ html {
 }
 
 #logo-section img {
+    height: 100px;
+    /* Altura do logo reduzida */
     max-width: 100%;
-    max-height: 100%;
     object-fit: contain;
 }
 
@@ -158,6 +162,8 @@ html {
     border: 2px solid #ddd;
     border-radius: 8px;
     overflow: hidden;
+    background: (0 0 0 / 20%);
+    
 }
 
 .test-label {
@@ -170,11 +176,12 @@ html {
 
 .test-status {
     flex-grow: 1;
-    background-color: white;
+    /* A cor de fundo agora vem do card pai (.test-item) */
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 10px;
+    
 }
 
 .status-indicator {
@@ -272,7 +279,6 @@ html {
     color: var(--cor-teste-fail);
 }
 
-/* Seção de Validação (última seção) */
 #validation-section {
     border-bottom: none;
     display: flex;
@@ -305,7 +311,6 @@ html {
     color: #555;
 }
 
-/* Classes de validação para os inputs */
 .info-input.match {
     background-color: #d4edda;
     border: 2px solid var(--cor-teste-ok);
@@ -320,12 +325,20 @@ html {
     height: 80px;
     width: 150px;
     font-size: var(--font-size-padrao);
-    /* Adicionado para alinhar com os grupos de validação */
     align-self: flex-end;
     margin-bottom: 10px;
 }
 
-/* Modal */
+.modal-content {
+    /* NOVO: Cor de fundo do modal */
+    background: var(--cor-primaria);
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 400px;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -344,15 +357,6 @@ html {
 .modal-overlay.hidden {
     opacity: 0;
     pointer-events: none;
-}
-
-.modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    width: 400px;
 }
 
 .modal-content p {

@@ -1,5 +1,3 @@
-// renderer.js
-
 // --- Variáveis de Estado Globais ---
 let currentModelObject = null;
 let isWaitingForStart = false;
@@ -8,8 +6,6 @@ let isTestRunning = false;
 let currentTestColumnIndex = 0;
 const INITIAL_COMMAND_COLUMN_INDEX = 4;
 const START_TEST_COLUMN_INDEX = 5;
-
-// --- Contadores ---
 let aprovadosCount = 0;
 let reprovadosCount = 0;
 
@@ -17,6 +13,8 @@ let reprovadosCount = 0;
 let noticeBoard, pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator, aprovadosCountSpan, reprovadosCountSpan,
     sectraInput, loteInput, sectraReceivedValue, loteReceivedValue;
 
+
+// --- Funções Auxiliares ---
 
 function updateCountDisplay() {
     if (aprovadosCountSpan) aprovadosCountSpan.textContent = aprovadosCount;
@@ -60,26 +58,47 @@ function processNextTestStep() {
         window.api.sendToArduino(currentModelObject.allData[INITIAL_COMMAND_COLUMN_INDEX]);
         return;
     }
-
     const firstChar = String(command).charAt(0).toUpperCase();
     if (firstChar === 'S') {
-        // Reseta o estado visual de todos os indicadores
-        noticeBoard.value = 'Resetando indicadores para a próxima fase...';
+        noticeBoard.value = `Configurando: ${command}`;
         [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
             if (ind) ind.className = 'status-indicator';
         });
-
-        // Envia o comando de setup e continua a sequência
-        noticeBoard.value = `Configurando: ${command}`;
         window.api.sendToArduino(command);
         currentTestColumnIndex++;
         setTimeout(processNextTestStep, 100);
         return;
     }
-
     noticeBoard.value = `Testando: ${command}...`;
     window.api.sendToArduino(command);
 }
+
+/**
+ * NOVO: Função centralizada para iniciar a sequência de testes.
+ */
+function startTestSequence() {
+    isTestRunning = true;
+    isWaitingForStart = false;
+    isWaitingForEvo = false;
+    currentTestColumnIndex = START_TEST_COLUMN_INDEX;
+
+    // Reseta os indicadores de teste para o estado "testando"
+    [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
+        if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
+            ind.className = 'status-indicator testing';
+        }
+    });
+
+    // Reseta os campos de validação de Sectra e Lote
+    if (sectraReceivedValue) sectraReceivedValue.textContent = '---';
+    if (sectraInput) sectraInput.classList.remove('match', 'mismatch');
+    if (loteReceivedValue) loteReceivedValue.textContent = '---';
+    if (loteInput) loteInput.classList.remove('match', 'mismatch');
+
+    // Inicia o primeiro passo da sequência
+    processNextTestStep();
+}
+
 
 let pendingModel = null;
 function showModal(modelToConfirm) {
@@ -100,6 +119,7 @@ function updateScrollButtonsVisibility(scrollElement, upButton, downButton) {
 }
 
 
+// --- LÓGICA PRINCIPAL DA PÁGINA ---
 window.addEventListener('DOMContentLoaded', async () => {
 
     noticeBoard = document.getElementById('notice-board');
@@ -137,6 +157,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             });
             return;
         }
+
         switch (data.type) {
             case '1P':
                 if (equipoValueSpan) equipoValueSpan.textContent = `${data.value} mmHg`;
@@ -166,52 +187,38 @@ window.addEventListener('DOMContentLoaded', async () => {
                 break;
             case 'B1':
                 if (isWaitingForStart && currentModelObject) {
-                    isWaitingForStart = false;
                     if (currentModelObject.isEvo) {
+                        isWaitingForStart = false;
                         isWaitingForEvo = true;
                         noticeBoard.value = 'Aguardando botão EVO...';
                     } else {
-                        isTestRunning = true;
-                        currentTestColumnIndex = START_TEST_COLUMN_INDEX;
-                        [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
-                            if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
-                                ind.className = 'status-indicator testing';
-                            }
-                        });
-                        processNextTestStep();
+                        startTestSequence();
                     }
                 }
                 break;
             case 'EVO_1':
                 if (isWaitingForEvo) {
-                    isWaitingForEvo = false;
-                    isTestRunning = true;
-                    currentTestColumnIndex = START_TEST_COLUMN_INDEX;
-                    [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
-                        if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
-                            ind.className = 'status-indicator testing';
-                        }
-                    });
-                    processNextTestStep();
+                    startTestSequence();
                 }
                 break;
             case 'S_response':
+                if (isTestRunning && data.value.startsWith('S') && data.value.length >= 7) {
+                    const receivedSectra = data.value.substring(1);
+                    sectraReceivedValue.textContent = receivedSectra;
+                    const userSectra = sectraInput.value;
+                    sectraInput.classList.remove('match', 'mismatch');
+                    sectraInput.classList.add(userSectra === receivedSectra ? 'match' : 'mismatch');
+                    currentTestColumnIndex++;
+                    processNextTestStep();
+                }
+                break;
             case 'N_response':
-                if (isTestRunning) {
-                    let targetInput, receivedValue, userValue;
-                    if (data.type === 'S_response') {
-                        targetInput = sectraInput;
-                        receivedValue = data.value.substring(1);
-                        sectraReceivedValue.textContent = receivedValue;
-                        userValue = targetInput.value;
-                    } else {
-                        targetInput = loteInput;
-                        receivedValue = data.value.substring(1);
-                        loteReceivedValue.textContent = receivedValue;
-                        userValue = targetInput.value;
-                    }
-                    targetInput.classList.remove('match', 'mismatch');
-                    targetInput.classList.add(userValue === receivedValue ? 'match' : 'mismatch');
+                if (isTestRunning && data.value.startsWith('N') && data.value.length >= 6) {
+                    const receivedLote = data.value.substring(1);
+                    loteReceivedValue.textContent = receivedLote;
+                    const userLote = loteInput.value;
+                    loteInput.classList.remove('match', 'mismatch');
+                    loteInput.classList.add(userLote === receivedLote ? 'match' : 'mismatch');
                     currentTestColumnIndex++;
                     processNextTestStep();
                 }
@@ -260,6 +267,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     cancelChangeBtn.addEventListener('click', hideModal);
 
     confirmChangeBtn.addEventListener('click', () => {
+        window.api.sendToArduino('[B0]');
         aprovadosCount = 0;
         reprovadosCount = 0;
         updateCountDisplay();
