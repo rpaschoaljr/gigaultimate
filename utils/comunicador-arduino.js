@@ -124,8 +124,7 @@ async function findArduinoPort(mainWindow) {
     if (isArduinoConnected) return;
     try {
         const ports = await SerialPort.list();
-        const arduinoPortInfo = ports.find(p => ARDUINO_VENDOR_IDS.includes(p.vendorId));
-        if (arduinoPortInfo) {
+const arduinoPortInfo = ports.find(p => ARDUINO_VENDOR_IDS.includes(p.vendorId.toUpperCase()));        if (arduinoPortInfo) {
             console.log(`Arduino encontrado na porta: ${arduinoPortInfo.path}`);
             connectToArduino(arduinoPortInfo.path, mainWindow);
         }
