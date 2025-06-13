@@ -121,7 +121,7 @@ function startTestSequence() {
     currentTestColumnIndex = START_TEST_COLUMN_INDEX;
     [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
         if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
-            ind.className = 'status-indicator testing';
+            ind.className = 'status-indicator';
         }
     });
     if (sectraReceivedValue) sectraReceivedValue.textContent = '---';
@@ -183,7 +183,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (isWaitingForEvoStart || isWaitingForEvoLock) {
                 isWaitingForEvoLock = true;
                 isWaitingForEvoStart = false;
-                noticeBoard.value = 'Equipamento destravado. Aguardando travamento ([EVO_1])...';
+                noticeBoard.value = 'Equipamento destravado. Aguardando travamento...';
             } else {
                 noticeBoard.value = 'Equipamento EVO destravado.';
             }
@@ -191,10 +191,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         switch (data.type) {
-            case '1P':
+            case '1R':
                 if (equipoValueSpan) equipoValueSpan.textContent = `${data.value} mmHg`;
                 break;
-            case '2P':
+            case '2R':
                 if (membranaValueSpan) membranaValueSpan.textContent = `${data.value} mmHg`;
                 break;
             case 'M':
