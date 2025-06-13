@@ -3,10 +3,16 @@
 const { ipcMain } = require('electron');
 const { SerialPort, ReadlineParser } = require('serialport');
 
+// --- Variáveis do Módulo ---
 let port;
 let isArduinoConnected = false;
-
 const ARDUINO_VENDOR_IDS = ['2341', '1A86'];
+
+// --- Variáveis para o Watchdog/Timeout ---
+const COMMUNICATION_TIMEOUT_MS = 5000; // 5 segundos. Ajuste este valor conforme necessário.
+let lastMessageTimestamp = 0;
+let watchdogInterval = null; // Guardará a referência do nosso "vigia" (setInterval)
+
 
 function connectToArduino(path, mainWindow) {
     port = new SerialPort({ path, baudRate: 9600 });
@@ -19,15 +25,30 @@ function connectToArduino(path, mainWindow) {
         if (mainWindow) {
             mainWindow.webContents.send('arduino-status', true);
         }
+
+        // Inicia o watchdog quando a porta abre
+        lastMessageTimestamp = Date.now(); // Reseta o timer
+        if (watchdogInterval) clearInterval(watchdogInterval); // Limpa qualquer vigia antigo
+
+        watchdogInterval = setInterval(() => {
+            if (Date.now() - lastMessageTimestamp > COMMUNICATION_TIMEOUT_MS) {
+                console.error(`Timeout de comunicação! Nenhum dado recebido em ${COMMUNICATION_TIMEOUT_MS / 1000}s. Reiniciando a conexão...`);
+                if (port && port.isOpen) {
+                    port.close();
+                }
+                clearInterval(watchdogInterval); // Para o vigia atual
+            }
+        }, 2000); // O vigia verifica a cada 2 segundos
     });
 
-    // --- LÓGICA DE PARSING ATUALIZADA ---
     parser.on('data', (data) => {
+        // "Acaricia o cão de guarda" toda vez que um dado chega, evitando o timeout
+        lastMessageTimestamp = Date.now();
+
         const message = data.trim();
         let reading = {};
 
-        // A ORDEM DOS 'IF'S É IMPORTANTE. OS MAIS ESPECÍFICOS VÊM PRIMEIRO.
-
+        // A ordem dos 'if's é importante. Os mais específicos vêm primeiro.
         if (message.startsWith('[1P') && message.endsWith(']')) {
             reading.type = '1P';
             reading.value = message.substring(3, message.length - 1);
@@ -43,13 +64,15 @@ function connectToArduino(path, mainWindow) {
         else if (message === '[B1]') {
             reading.type = 'B1';
         }
+        else if (message === '[B0]') {
+            reading.type = 'B0';
+        }
         else if (message === '[EVO_1]') {
             reading.type = 'EVO_1';
         }
         else if (message === '[EVO_X]') {
             reading.type = 'EVO_X';
         }
-        // NOVOS PARSERS para as respostas S e N
         else if (message.startsWith('[S') && message.endsWith(']')) {
             reading.type = 'S_response';
             reading.value = message.substring(1, message.length - 1);
@@ -58,7 +81,6 @@ function connectToArduino(path, mainWindow) {
             reading.type = 'N_response';
             reading.value = message.substring(1, message.length - 1);
         }
-        // Parser para as respostas de teste P, C, E, T
         else if (message.startsWith('[') && message.endsWith(']')) {
             reading.type = 'message';
             reading.value = message.substring(1, message.length - 1);
@@ -76,6 +98,13 @@ function connectToArduino(path, mainWindow) {
         isArduinoConnected = false;
         port = null;
         console.log('Conexão com Arduino perdida.');
+
+        // Garante que o vigia seja parado ao fechar a porta
+        if (watchdogInterval) {
+            clearInterval(watchdogInterval);
+            watchdogInterval = null;
+        }
+
         if (mainWindow) {
             mainWindow.webContents.send('arduino-status', false);
         }
@@ -83,6 +112,9 @@ function connectToArduino(path, mainWindow) {
 
     port.on('error', (err) => {
         console.error('Erro na porta serial:', err.message);
+        if (port && port.isOpen) {
+            port.close();
+        }
     });
 }
 
@@ -101,8 +133,10 @@ async function findArduinoPort(mainWindow) {
 }
 
 function start(mainWindow) {
+    // Inicia a busca periódica pelo Arduino
     setInterval(() => findArduinoPort(mainWindow), 3000);
 
+    // Ouve os comandos de envio vindos da interface
     ipcMain.on('send-to-arduino', (event, command) => {
         if (port && isArduinoConnected) {
             let finalCommand = String(command).trim();
