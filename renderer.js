@@ -1,8 +1,13 @@
+// renderer.js
+
 // --- Variáveis de Estado Globais ---
 let currentModelObject = null;
+let pendingModel = null; // A única declaração correta, aqui no topo.
 let isWaitingForStart = false;
-let isWaitingForEvo = false;
+let isWaitingForEvoLock = false;
+let isWaitingForEvoStart = false;
 let isTestRunning = false;
+let isEvoLockedOut = false;
 let currentTestColumnIndex = 0;
 const INITIAL_COMMAND_COLUMN_INDEX = 4;
 const START_TEST_COLUMN_INDEX = 5;
@@ -24,11 +29,14 @@ function updateCountDisplay() {
 function selectModel(model) {
     if (!model || !model.allData) return;
     currentModelObject = model;
-    isWaitingForStart = true;
-    isWaitingForEvo = false;
+
+    isWaitingForStart = false;
+    isWaitingForEvoLock = false;
+    isWaitingForEvoStart = false;
     isTestRunning = false;
+
     document.getElementById('modelo-display').textContent = model.name;
-    document.getElementById('notice-board').value = 'Aguardando o botão de início...';
+
     [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
         if (ind) ind.className = 'status-indicator';
     });
@@ -36,6 +44,19 @@ function selectModel(model) {
     if (loteInput) loteInput.classList.remove('match', 'mismatch');
     if (sectraReceivedValue) sectraReceivedValue.textContent = '---';
     if (loteReceivedValue) loteReceivedValue.textContent = '---';
+
+    if (model.isEvo) {
+        if (isEvoLockedOut) {
+            noticeBoard.value = 'Destrave o equipamento EVO para continuar ([EVO_X])';
+        } else {
+            isWaitingForEvoLock = true;
+            noticeBoard.value = 'Aguardando travamento do equipamento EVO ([EVO_1])...';
+        }
+    } else {
+        isWaitingForStart = true;
+        noticeBoard.value = 'Aguardando o botão de início...';
+    }
+
     window.api.sendToArduino(currentModelObject.allData[INITIAL_COMMAND_COLUMN_INDEX]);
     document.getElementById('tag-section').classList.toggle('hidden', !model.showTag);
     document.getElementById('membrana-section').classList.toggle('hidden', !model.showMembrana);
@@ -45,11 +66,19 @@ function processNextTestStep() {
     if (!isTestRunning || !currentModelObject) return;
     const command = currentModelObject.allData[currentTestColumnIndex];
     if (!command || String(command).toUpperCase() === 'OK') {
-        noticeBoard.value = "Sucesso! Pressione o botão para iniciar novamente.";
+        noticeBoard.value = "Sucesso!";
         isTestRunning = false;
         isWaitingForStart = true;
         aprovadosCount++;
         updateCountDisplay();
+
+        if (currentModelObject.isEvo) {
+            isEvoLockedOut = true;
+            noticeBoard.value += ' Destrave o equipamento para novo teste.';
+        } else {
+            noticeBoard.value += ' Pressione o botão para iniciar novamente.';
+        }
+
         [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
             if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
                 if (!ind.classList.contains('fail')) ind.className = 'status-indicator ok';
@@ -60,47 +89,48 @@ function processNextTestStep() {
     }
     const firstChar = String(command).charAt(0).toUpperCase();
     if (firstChar === 'S') {
-        noticeBoard.value = `Configurando: ${command}`;
+        noticeBoard.value = 'Resetando indicadores para a próxima fase...';
         [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
             if (ind) ind.className = 'status-indicator';
         });
+        noticeBoard.value = `Configurando: ${command}`;
         window.api.sendToArduino(command);
         currentTestColumnIndex++;
         setTimeout(processNextTestStep, 100);
         return;
     }
+    let targetIndicator;
+    switch (firstChar) {
+        case 'P': targetIndicator = pressurizacaoIndicator; break;
+        case 'C': targetIndicator = conformidadeIndicator; break;
+        case 'E': targetIndicator = estanqueidadeIndicator; break;
+        case 'T': targetIndicator = tagIndicator; break;
+    }
+    if (targetIndicator) {
+        targetIndicator.className = 'status-indicator testing';
+    }
     noticeBoard.value = `Testando: ${command}...`;
     window.api.sendToArduino(command);
 }
 
-/**
- * NOVO: Função centralizada para iniciar a sequência de testes.
- */
 function startTestSequence() {
     isTestRunning = true;
     isWaitingForStart = false;
-    isWaitingForEvo = false;
+    isWaitingForEvoLock = false;
+    isWaitingForEvoStart = false;
     currentTestColumnIndex = START_TEST_COLUMN_INDEX;
-
-    // Reseta os indicadores de teste para o estado "testando"
     [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
         if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
             ind.className = 'status-indicator testing';
         }
     });
-
-    // Reseta os campos de validação de Sectra e Lote
     if (sectraReceivedValue) sectraReceivedValue.textContent = '---';
     if (sectraInput) sectraInput.classList.remove('match', 'mismatch');
     if (loteReceivedValue) loteReceivedValue.textContent = '---';
     if (loteInput) loteInput.classList.remove('match', 'mismatch');
-
-    // Inicia o primeiro passo da sequência
     processNextTestStep();
 }
 
-
-let pendingModel = null;
 function showModal(modelToConfirm) {
     pendingModel = modelToConfirm;
     document.getElementById('confirmation-modal').classList.remove('hidden');
@@ -119,7 +149,6 @@ function updateScrollButtonsVisibility(scrollElement, upButton, downButton) {
 }
 
 
-// --- LÓGICA PRINCIPAL DA PÁGINA ---
 window.addEventListener('DOMContentLoaded', async () => {
 
     noticeBoard = document.getElementById('notice-board');
@@ -146,15 +175,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     window.api.onArduinoData((data) => {
         if (data.type === 'EVO_X' && currentModelObject && currentModelObject.isEvo) {
-            isTestRunning = false;
-            isWaitingForStart = false;
-            isWaitingForEvo = false;
-            noticeBoard.value = 'Botão EVO desabilitado. Teste interrompido.';
-            [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
-                if (ind && !ind.parentElement.parentElement.classList.contains('hidden')) {
-                    ind.className = 'status-indicator fail';
-                }
-            });
+            isEvoLockedOut = false;
+            if (isTestRunning) {
+                isTestRunning = false;
+                isWaitingForStart = true;
+            }
+            if (isWaitingForEvoStart || isWaitingForEvoLock) {
+                isWaitingForEvoLock = true;
+                isWaitingForEvoStart = false;
+                noticeBoard.value = 'Equipamento destravado. Aguardando travamento ([EVO_1])...';
+            } else {
+                noticeBoard.value = 'Equipamento EVO destravado.';
+            }
             return;
         }
 
@@ -172,10 +204,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
                 break;
             case 'B0':
-                if (isTestRunning || isWaitingForEvo) {
+                if (isTestRunning || isWaitingForEvoLock || isWaitingForEvoStart) {
                     isTestRunning = false;
                     isWaitingForStart = true;
-                    isWaitingForEvo = false;
+                    isWaitingForEvoLock = false;
+                    isWaitingForEvoStart = false;
                     noticeBoard.value = 'Teste cancelado. Pressione o botão para iniciar.';
                     [pressurizacaoIndicator, conformidadeIndicator, estanqueidadeIndicator, tagIndicator].forEach(ind => {
                         if (ind) ind.className = 'status-indicator';
@@ -186,23 +219,22 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
                 break;
             case 'B1':
-                if (isWaitingForStart && currentModelObject) {
-                    if (currentModelObject.isEvo) {
-                        isWaitingForStart = false;
-                        isWaitingForEvo = true;
-                        noticeBoard.value = 'Aguardando botão EVO...';
-                    } else {
-                        startTestSequence();
-                    }
-                }
-                break;
-            case 'EVO_1':
-                if (isWaitingForEvo) {
+                if (isWaitingForStart) {
+                    startTestSequence();
+                } else if (isWaitingForEvoStart) {
+                    isWaitingForEvoStart = false;
                     startTestSequence();
                 }
                 break;
+            case 'EVO_1':
+                if (isWaitingForEvoLock) {
+                    isWaitingForEvoLock = false;
+                    isWaitingForEvoStart = true;
+                    noticeBoard.value = 'Equipamento travado. Pressione Início ([B1]).';
+                }
+                break;
             case 'S_response':
-                if (isTestRunning && data.value.startsWith('S') && data.value.length >= 7) {
+                if (isTestRunning && data.value.startsWith('S') && data.value.length === 10) {
                     const receivedSectra = data.value.substring(1);
                     sectraReceivedValue.textContent = receivedSectra;
                     const userSectra = sectraInput.value;
@@ -210,10 +242,10 @@ window.addEventListener('DOMContentLoaded', async () => {
                     sectraInput.classList.add(userSectra === receivedSectra ? 'match' : 'mismatch');
                     currentTestColumnIndex++;
                     processNextTestStep();
-                }
+                } else if (isTestRunning) { console.log(`Mensagem 'S' ignorada (formato inválido): ${data.value}`); }
                 break;
             case 'N_response':
-                if (isTestRunning && data.value.startsWith('N') && data.value.length >= 6) {
+                if (isTestRunning && data.value.startsWith('N') && data.value.length === 8) {
                     const receivedLote = data.value.substring(1);
                     loteReceivedValue.textContent = receivedLote;
                     const userLote = loteInput.value;
@@ -221,7 +253,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     loteInput.classList.add(userLote === receivedLote ? 'match' : 'mismatch');
                     currentTestColumnIndex++;
                     processNextTestStep();
-                }
+                } else if (isTestRunning) { console.log(`Mensagem 'N' ignorada (formato inválido): ${data.value}`); }
                 break;
             case 'message':
                 if (isTestRunning) {
@@ -245,11 +277,17 @@ window.addEventListener('DOMContentLoaded', async () => {
                             } else if (testResult === '0') {
                                 targetIndicator.className = 'status-indicator fail';
                                 const failedCommand = currentModelObject.allData[currentTestColumnIndex];
-                                noticeBoard.value = `Falha no teste: ${failedCommand}. Pressione o botão para iniciar novamente.`;
+                                noticeBoard.value = `Falha no teste: ${failedCommand}.`;
                                 isTestRunning = false;
                                 isWaitingForStart = true;
                                 reprovadosCount++;
                                 updateCountDisplay();
+                                if (currentModelObject.isEvo) {
+                                    isEvoLockedOut = true;
+                                    noticeBoard.value += ' Destrave o equipamento para novo teste.';
+                                } else {
+                                    noticeBoard.value += ' Pressione o botão para iniciar novamente.';
+                                }
                                 window.api.sendToArduino(currentModelObject.allData[INITIAL_COMMAND_COLUMN_INDEX]);
                             }
                         }
@@ -259,7 +297,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    sidebar.addEventListener('scroll', () => updateScrollButtonsVisibility(sidebar, scrollUpBtn, scrollDownBtn));
+    sidebar.addEventListener('scroll', () => updateScrollButtonsVisibility(scrollUpBtn, scrollDownBtn));
     const scrollAmount = 120 + 10;
     scrollUpBtn.addEventListener('click', () => sidebar.scrollBy({ top: -scrollAmount, behavior: 'smooth' }));
     scrollDownBtn.addEventListener('click', () => sidebar.scrollBy({ top: scrollAmount, behavior: 'smooth' }));
@@ -297,5 +335,5 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     updateCountDisplay();
-    setTimeout(() => updateScrollButtonsVisibility(sidebar, scrollUpBtn, scrollDownBtn), 100);
+    setTimeout(() => updateScrollButtonsVisibility(scrollUpBtn, scrollDownBtn), 100);
 });
