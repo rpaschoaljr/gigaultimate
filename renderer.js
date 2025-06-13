@@ -189,7 +189,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
             return;
         }
-
+        // Recebimento dos dados do arduino e tratativos
         switch (data.type) {
             case '1R':
                 if (equipoValueSpan) equipoValueSpan.textContent = `${data.value} mmHg`;
