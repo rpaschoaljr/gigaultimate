@@ -49,12 +49,15 @@ function connectToArduino(path, mainWindow) {
         let reading = {};
 
         // A ordem dos 'if's é importante. Os mais específicos vêm primeiro.
-        if (message.startsWith('[1P') && message.endsWith(']')) {
-            reading.type = '1P';
+
+        // Checa por [1R], [2R], [3R], ou [4R] para Pressão Equipo
+        if ((message.startsWith('[1R') || message.startsWith('[2R') || message.startsWith('[3R') || message.startsWith('[4R')) && message.endsWith(']')) {
+            reading.type = 'EquipoPressure'; // Novo tipo descritivo
             reading.value = message.substring(3, message.length - 1);
         }
-        else if (message.startsWith('[2P') && message.endsWith(']')) {
-            reading.type = '2P';
+        // Checa por [5R] para Pressão Membrana
+        else if (message.startsWith('[5R') && message.endsWith(']')) {
+            reading.type = 'MembranaPressure'; // Novo tipo descritivo
             reading.value = message.substring(3, message.length - 1);
         }
         else if (message.startsWith('[M') && message.endsWith(']')) {
@@ -99,7 +102,6 @@ function connectToArduino(path, mainWindow) {
         port = null;
         console.log('Conexão com Arduino perdida.');
 
-        // Garante que o vigia seja parado ao fechar a porta
         if (watchdogInterval) {
             clearInterval(watchdogInterval);
             watchdogInterval = null;
@@ -133,10 +135,8 @@ async function findArduinoPort(mainWindow) {
 }
 
 function start(mainWindow) {
-    // Inicia a busca periódica pelo Arduino
     setInterval(() => findArduinoPort(mainWindow), 3000);
 
-    // Ouve os comandos de envio vindos da interface
     ipcMain.on('send-to-arduino', (event, command) => {
         if (port && isArduinoConnected) {
             let finalCommand = String(command).trim();

@@ -1,8 +1,6 @@
-// renderer.js
-
 // --- Variáveis de Estado Globais ---
 let currentModelObject = null;
-let pendingModel = null; // A única declaração correta, aqui no topo.
+let pendingModel = null;
 let isWaitingForStart = false;
 let isWaitingForEvoLock = false;
 let isWaitingForEvoStart = false;
@@ -174,27 +172,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const tempoValueSpan = document.getElementById('tempo-value');
 
     window.api.onArduinoData((data) => {
-        if (data.type === 'EVO_X' && currentModelObject && currentModelObject.isEvo) {
-            isEvoLockedOut = false;
-            if (isTestRunning) {
-                isTestRunning = false;
-                isWaitingForStart = true;
-            }
-            if (isWaitingForEvoStart || isWaitingForEvoLock) {
-                isWaitingForEvoLock = true;
-                isWaitingForEvoStart = false;
-                noticeBoard.value = 'Equipamento destravado. Aguardando travamento...';
-            } else {
-                noticeBoard.value = 'Equipamento EVO destravado.';
-            }
-            return;
-        }
-        // Recebimento dos dados do arduino e tratativos
+
         switch (data.type) {
-            case '1R':
+            case 'EquipoPressure':
                 if (equipoValueSpan) equipoValueSpan.textContent = `${data.value} mmHg`;
                 break;
-            case '2R':
+            case 'MembranaPressure':
                 if (membranaValueSpan) membranaValueSpan.textContent = `${data.value} mmHg`;
                 break;
             case 'M':
@@ -231,6 +214,13 @@ window.addEventListener('DOMContentLoaded', async () => {
                     isWaitingForEvoLock = false;
                     isWaitingForEvoStart = true;
                     noticeBoard.value = 'Equipamento travado. Pressione Início ([B1]).';
+                }
+                break;
+            case 'EVO_X':
+                if (currentModelObject && currentModelObject.isEvo) {
+                    isEvoLockedOut = false;
+                    isWaitingForEvoLock = true;
+                    noticeBoard.value = 'Equipamento destravado. Aguardando travamento ([EVO_1])...';
                 }
                 break;
             case 'S_response':
